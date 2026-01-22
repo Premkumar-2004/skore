@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -199,11 +198,15 @@ def _convert_coefficients_to_wide(
         if has_estimator:
             group_cols.append("estimator")
 
-        df = _aggregate_cv_splits(df, value_column="coefficients", group_columns=group_cols)
+        df = _aggregate_cv_splits(
+            df, value_column="coefficients", group_columns=group_cols
+        )
         value_column = "coefficients_mean"
         # Add formatted column with mean ± std
         df["coefficients_formatted"] = df.apply(
-            lambda row: f"{row['coefficients_mean']:.4f} ± {row['coefficients_std']:.4f}",
+            lambda row: (
+                f"{row['coefficients_mean']:.4f} ± {row['coefficients_std']:.4f}"
+            ),
             axis=1,
         )
     else:

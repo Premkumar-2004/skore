@@ -1,6 +1,5 @@
 """Tests for the format utilities in CoefficientsDisplay.frame()."""
 
-import numpy as np
 import pandas as pd
 import pytest
 from sklearn.datasets import load_iris, make_regression

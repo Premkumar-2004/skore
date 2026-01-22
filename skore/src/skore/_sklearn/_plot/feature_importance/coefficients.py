@@ -200,7 +200,9 @@ class CoefficientsDisplay(DisplayMixin):
 
         Filter to a specific label:
 
-        >>> display.frame(format="wide", query={"label": "setosa"})  # doctest: +NORMALIZE_WHITESPACE
+        >>> display.frame(
+        ...     format="wide", query={"label": "setosa"}
+        ... )  # doctest: +NORMALIZE_WHITESPACE
         label              setosa
         feature
         Intercept            9.2...

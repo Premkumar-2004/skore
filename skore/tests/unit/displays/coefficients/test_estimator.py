@@ -389,3 +389,32 @@ def test_include_intercept(
     )
     estimator_name = display.coefficients["estimator"][0]
     assert display.figure_.get_suptitle() == f"Coefficients of {estimator_name}"
+
+
+def test_query_parameter(
+    pyplot,
+    logistic_multiclass_classification_with_train_test,
+):
+    """Check that the query parameter filters data correctly."""
+    estimator, X_train, X_test, y_train, y_test = (
+        logistic_multiclass_classification_with_train_test
+    )
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report = EstimatorReport(
+        clone(estimator), X_train=X_train, y_train=y_train, X_test=X_test, y_test=y_test
+    )
+    display = report.feature_importance.coefficients()
+
+    labels = np.unique(y_train)
+    target_label = int(labels[0])
+    df_filtered = display.frame(format="long", query={"label": target_label})
+
+    assert df_filtered["label"].nunique() == 1
+    assert df_filtered["label"].iloc[0] == target_label
+
+    # Filter by feature
+    df_feature = display.frame(format="long", query={"feature": "Intercept"})
+    assert df_feature["feature"].unique().tolist() == ["Intercept"]

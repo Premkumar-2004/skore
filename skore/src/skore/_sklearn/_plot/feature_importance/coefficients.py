@@ -54,9 +54,6 @@ class CoefficientsDisplay(DisplayMixin):
     ... )
     >>> report = EstimatorReport(LogisticRegression(), **split_data)
     >>> display = report.feature_importance.coefficients()
-
-    Get coefficients in wide format (default):
-
     >>> display.frame()
     label                   setosa  versicolor  virginica
     feature
@@ -65,26 +62,6 @@ class CoefficientsDisplay(DisplayMixin):
     sepal width (cm)          0.8...      -0.2...     -0.5...
     petal length (cm)        -2.3...      -0.2...      2.5...
     petal width (cm)         -0.9...      -0.7...      1.7...
-
-    Get coefficients in long format:
-
-    >>> display.frame(format="long")
-                  feature       label  coefficients
-    0           Intercept      setosa      9.2...
-    1   sepal length (cm)      setosa     -0.4...
-    2    sepal width (cm)      setosa      0.8...
-    3   petal length (cm)      setosa     -2.3...
-    4    petal width (cm)      setosa     -0.9...
-    5           Intercept  versicolor      1.7...
-    6   sepal length (cm)  versicolor      0.5...
-    7    sepal width (cm)  versicolor     -0.2...
-    8   petal length (cm)  versicolor     -0.2...
-    9    petal width (cm)  versicolor     -0.7...
-    10          Intercept   virginica    -11.0...
-    11  sepal length (cm)   virginica     -0.1...
-    12   sepal width (cm)   virginica     -0.5...
-    13  petal length (cm)   virginica      2.5...
-    14   petal width (cm)   virginica      1.7...
     """
 
     _default_barplot_kwargs: dict[str, Any] = {"palette": "tab10"}
@@ -127,6 +104,51 @@ class CoefficientsDisplay(DisplayMixin):
         -------
         DataFrame
             Coefficients of the linear model.
+
+        Examples
+        --------
+        >>> from sklearn.datasets import load_iris
+        >>> from sklearn.linear_model import LogisticRegression
+        >>> from skore import EstimatorReport, train_test_split
+        >>> iris = load_iris(as_frame=True)
+        >>> X, y = iris.data, iris.target
+        >>> y = iris.target_names[y]
+        >>> split_data = train_test_split(
+        ...     X=X, y=y, random_state=0, as_dict=True, shuffle=True
+        ... )
+        >>> report = EstimatorReport(LogisticRegression(), **split_data)
+        >>> display = report.feature_importance.coefficients()
+
+        Get coefficients in wide format (default):
+
+        >>> display.frame()
+        label                   setosa  versicolor  virginica
+        feature
+        Intercept                 9.2...       1.7...    -11.0...
+        sepal length (cm)        -0.4...       0.5...     -0.1...
+        sepal width (cm)          0.8...      -0.2...     -0.5...
+        petal length (cm)        -2.3...      -0.2...      2.5...
+        petal width (cm)         -0.9...      -0.7...      1.7...
+
+        Get coefficients in long format:
+
+        >>> display.frame(format="long")
+                      feature       label  coefficients
+        0           Intercept      setosa      9.2...
+        1   sepal length (cm)      setosa     -0.4...
+        2    sepal width (cm)      setosa      0.8...
+        3   petal length (cm)      setosa     -2.3...
+        4    petal width (cm)      setosa     -0.9...
+        5           Intercept  versicolor      1.7...
+        6   sepal length (cm)  versicolor      0.5...
+        7    sepal width (cm)  versicolor     -0.2...
+        8   petal length (cm)  versicolor     -0.2...
+        9    petal width (cm)  versicolor     -0.7...
+        10          Intercept   virginica    -11.0...
+        11  sepal length (cm)   virginica     -0.1...
+        12   sepal width (cm)   virginica     -0.5...
+        13  petal length (cm)   virginica      2.5...
+        14   petal width (cm)   virginica      1.7...
         """
         if self.report_type == "estimator":
             columns_to_drop = ["estimator", "split"]
@@ -157,12 +179,9 @@ class CoefficientsDisplay(DisplayMixin):
             return df.reset_index(drop=True)
 
         # Wide format: pivot the dataframe
-        has_label = "label" in df.columns
-        has_split = "split" in df.columns
-        has_estimator = "estimator" in df.columns
-        label_col = "label" if has_label else "output"
+        label_col = "label" if "label" in df else "output"
 
-        if aggregate and has_split:
+        if aggregate and "split" in df:
             group_cols = [c for c in df.columns if c not in ("split", "coefficients")]
             agg = df.groupby(group_cols, sort=False)["coefficients"].agg(["mean", "std"])
             agg["value"] = agg.apply(
@@ -170,14 +189,17 @@ class CoefficientsDisplay(DisplayMixin):
             )
             df = agg["value"].reset_index()
             df.columns = list(group_cols) + ["coefficients"]
-            has_split = False
 
-        if has_estimator:
-            index = ["feature"] if not has_label else [label_col, "feature"]
-            columns = ["estimator", "split"] if has_split else ["estimator"]
+        if "estimator" in df:
+            index = ["feature"] if "label" not in df else [label_col, "feature"]
+            columns = ["estimator", "split"] if "split" in df else ["estimator"]
         else:
             index = ["feature"]
-            columns = [label_col, "split"] if has_split else [label_col] if has_label else None
+            columns = (
+                [label_col, "split"] if "split" in df
+                else [label_col] if "label" in df
+                else None
+            )
 
         if columns:
             result = df.pivot_table(

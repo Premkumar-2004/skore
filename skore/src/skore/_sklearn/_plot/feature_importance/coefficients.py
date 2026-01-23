@@ -10,12 +10,6 @@ from sklearn.compose import TransformedTargetRegressor
 from sklearn.pipeline import Pipeline
 
 from skore._sklearn._plot.base import BOXPLOT_STYLE, DisplayMixin
-from skore._sklearn._plot.format_utils import (
-    FormatType,
-    _apply_query_filter,
-    _convert_coefficients_to_wide,
-    _validate_format_for_report_type,
-)
 from skore._sklearn._plot.utils import _despine_matplotlib_axis
 from skore._sklearn.feature_names import _get_feature_names
 from skore._sklearn.types import ReportType
@@ -61,9 +55,20 @@ class CoefficientsDisplay(DisplayMixin):
     >>> report = EstimatorReport(LogisticRegression(), **split_data)
     >>> display = report.feature_importance.coefficients()
 
-    Get coefficients in long format (default):
+    Get coefficients in wide format (default):
 
-    >>> display.frame()
+    >>> display.frame()  # doctest: +NORMALIZE_WHITESPACE
+    label                   setosa  versicolor  virginica
+    feature
+    Intercept                 9.2...       1.7...    -11.0...
+    sepal length (cm)        -0.4...       0.5...     -0.1...
+    sepal width (cm)          0.8...      -0.2...     -0.5...
+    petal length (cm)        -2.3...      -0.2...      2.5...
+    petal width (cm)         -0.9...      -0.7...      1.7...
+
+    Get coefficients in long format:
+
+    >>> display.frame(format="long")
                   feature       label  coefficients
     0           Intercept      setosa      9.2...
     1   sepal length (cm)      setosa     -0.4...
@@ -80,17 +85,6 @@ class CoefficientsDisplay(DisplayMixin):
     12   sepal width (cm)   virginica     -0.5...
     13  petal length (cm)   virginica      2.5...
     14   petal width (cm)   virginica      1.7...
-
-    Get coefficients in wide format:
-
-    >>> display.frame(format="wide")  # doctest: +NORMALIZE_WHITESPACE
-    label                   setosa  versicolor  virginica
-    feature
-    Intercept                 9.2...       1.7...    -11.0...
-    sepal length (cm)        -0.4...       0.5...     -0.1...
-    sepal width (cm)          0.8...      -0.2...     -0.5...
-    petal length (cm)        -2.3...      -0.2...      2.5...
-    petal width (cm)         -0.9...      -0.7...      1.7...
     """
 
     _default_barplot_kwargs: dict[str, Any] = {"palette": "tab10"}
@@ -108,148 +102,93 @@ class CoefficientsDisplay(DisplayMixin):
         self,
         *,
         include_intercept: bool = True,
-        format: FormatType = "long",
+        format: Literal["long", "wide"] = "wide",
         aggregate: bool = False,
         query: dict[str, Any] | None = None,
-    ):
+    ) -> pd.DataFrame:
         """Get the coefficients in a dataframe format.
-
-        The returned dataframe is not going to contain constant columns or columns
-        containing only NaN values.
 
         Parameters
         ----------
         include_intercept : bool, default=True
-            Whether or not to include the intercept in the dataframe.
+            Whether to include the intercept in the dataframe.
 
-        format : {"auto", "long", "wide"}, default="long"
-            The format of the returned dataframe.
-
-            - "long": Returns data in long format with one row per coefficient
-              observation. This is the internal storage format, good for plotting.
-            - "wide": Returns data in wide format with features as rows and
-              labels/splits as columns. Better for human readability.
-            - "auto": Automatically selects the format based on report type.
-              EstimatorReport and CrossValidationReport use "wide",
-              ComparisonReport uses "long" (wide not supported).
+        format : {"long", "wide"}, default="wide"
+            Output format. "wide" pivots features as rows with labels/splits as
+            columns. "long" returns raw data with one row per observation.
 
         aggregate : bool, default=False
-            Whether to aggregate cross-validation splits by computing mean ± std.
-            Only applicable when format is "wide" and the report contains CV splits.
-            When True, the values are formatted as "mean ± std".
+            When True and format="wide", aggregate CV splits showing "mean ± std".
 
         query : dict or None, default=None
-            Dictionary of column names to values for filtering the data before
-            formatting. Example: ``{"label": "setosa"}`` to filter to a specific
-            class label.
+            Filter data before formatting. Example: ``{"label": "setosa"}``.
 
         Returns
         -------
         DataFrame
-            Dataframe containing the coefficients of the linear model.
-
-        Raises
-        ------
-        ValueError
-            If format="wide" is requested for a comparison report.
-
-        Examples
-        --------
-        >>> from sklearn.datasets import load_iris
-        >>> from sklearn.linear_model import LogisticRegression
-        >>> from skore import EstimatorReport, train_test_split
-        >>> iris = load_iris(as_frame=True)
-        >>> X, y = iris.data, iris.target
-        >>> y = iris.target_names[y]
-        >>> split_data = train_test_split(
-        ...     X=X, y=y, random_state=0, as_dict=True, shuffle=True
-        ... )
-        >>> report = EstimatorReport(LogisticRegression(), **split_data)
-        >>> display = report.feature_importance.coefficients()
-
-        Get coefficients in long format (default):
-
-        >>> display.frame()
-                    feature       label  coefficients
-        0           Intercept      setosa      9.2...
-        1   sepal length (cm)      setosa     -0.4...
-        2    sepal width (cm)      setosa      0.8...
-        3   petal length (cm)      setosa     -2.3...
-        4    petal width (cm)      setosa     -0.9...
-        5           Intercept  versicolor      1.7...
-        6   sepal length (cm)  versicolor      0.5...
-        7    sepal width (cm)  versicolor     -0.2...
-        8   petal length (cm)  versicolor     -0.2...
-        9    petal width (cm)  versicolor     -0.7...
-        10          Intercept   virginica    -11.0...
-        11  sepal length (cm)   virginica     -0.1...
-        12   sepal width (cm)   virginica     -0.5...
-        13  petal length (cm)   virginica      2.5...
-        14   petal width (cm)   virginica      1.7...
-
-        Get coefficients in wide format:
-
-        >>> display.frame(format="wide")  # doctest: +NORMALIZE_WHITESPACE
-        label                   setosa  versicolor  virginica
-        feature
-        Intercept                 9.2...       1.7...    -11.0...
-        sepal length (cm)        -0.4...       0.5...     -0.1...
-        sepal width (cm)          0.8...      -0.2...     -0.5...
-        petal length (cm)        -2.3...      -0.2...      2.5...
-        petal width (cm)         -0.9...      -0.7...      1.7...
-
-        Filter to a specific label:
-
-        >>> display.frame(
-        ...     format="wide", query={"label": "setosa"}
-        ... )  # doctest: +NORMALIZE_WHITESPACE
-        label              setosa
-        feature
-        Intercept            9.2...
-        sepal length (cm)   -0.4...
-        sepal width (cm)     0.8...
-        petal length (cm)   -2.3...
-        petal width (cm)    -0.9...
+            Coefficients of the linear model.
         """
-        # Validate and resolve format
-        resolved_format = _validate_format_for_report_type(format, self.report_type)
-
-        # Determine columns to drop based on report type
         if self.report_type == "estimator":
             columns_to_drop = ["estimator", "split"]
         elif self.report_type == "cross-validation":
             columns_to_drop = ["estimator"]
         elif self.report_type == "comparison-estimator":
             columns_to_drop = ["split"]
-        elif self.report_type == "comparison-cross-validation":
+        else:  # comparison-cross-validation
             columns_to_drop = []
-        else:
-            raise TypeError(f"Unexpected report type: {self.report_type!r}")
 
         if self.coefficients["label"].isna().all():
-            # regression problem
             columns_to_drop.append("label")
         if self.coefficients["output"].isna().all():
-            # classification problem
             columns_to_drop.append("output")
 
-        coefficients = self.coefficients.drop(columns=columns_to_drop)
+        df = self.coefficients.drop(columns=columns_to_drop)
+
         if not include_intercept:
-            coefficients = coefficients.query("feature != 'Intercept'")
+            df = df.query("feature != 'Intercept'")
 
-        # Apply query filter if provided
         if query is not None:
-            coefficients = _apply_query_filter(coefficients, query)
-
-        # Convert to wide format if requested
-        if resolved_format == "wide":
-            coefficients = _convert_coefficients_to_wide(
-                coefficients,
-                report_type=self.report_type,
-                aggregate=aggregate,
+            conditions = " and ".join(
+                f"`{col}` == {repr(val)}" for col, val in query.items()
             )
+            df = df.query(conditions)
 
-        return coefficients
+        if format == "long":
+            return df.reset_index(drop=True)
+
+        # Wide format: pivot the dataframe
+        has_label = "label" in df.columns
+        has_split = "split" in df.columns
+        has_estimator = "estimator" in df.columns
+        label_col = "label" if has_label else "output"
+
+        if aggregate and has_split:
+            group_cols = [c for c in df.columns if c not in ("split", "coefficients")]
+            agg = df.groupby(group_cols, sort=False)["coefficients"].agg(["mean", "std"])
+            agg["value"] = agg.apply(
+                lambda r: f"{r['mean']:.3f} ± {r['std']:.3f}", axis=1
+            )
+            df = agg["value"].reset_index()
+            df.columns = list(group_cols) + ["coefficients"]
+            has_split = False
+
+        index = ["feature"] if not has_estimator else ["estimator", "feature"]
+        columns = (
+            [label_col, "split"] if has_split else [label_col] if has_label else None
+        )
+
+        if columns:
+            result = df.pivot_table(
+                index=index,
+                columns=columns,
+                values="coefficients",
+                aggfunc="first",
+                sort=False,
+            )
+        else:
+            result = df.set_index(index)["coefficients"].to_frame()
+
+        return result
 
     @DisplayMixin.style_plot
     def plot(
@@ -304,7 +243,7 @@ class CoefficientsDisplay(DisplayMixin):
 
         if self.report_type in ("estimator", "cross-validation"):
             return self._plot_single_estimator(
-                frame=self.frame(include_intercept=include_intercept),
+                frame=self.frame(include_intercept=include_intercept, format="long"),
                 estimator_name=self.coefficients["estimator"][0],
                 report_type=self.report_type,
                 subplot_by=subplot_by,
@@ -317,7 +256,7 @@ class CoefficientsDisplay(DisplayMixin):
             "comparison-cross-validation",
         ):
             return self._plot_comparison(
-                frame=self.frame(include_intercept=include_intercept),
+                frame=self.frame(include_intercept=include_intercept, format="long"),
                 report_type=self.report_type,
                 subplot_by=subplot_by,
                 barplot_kwargs=barplot_kwargs,

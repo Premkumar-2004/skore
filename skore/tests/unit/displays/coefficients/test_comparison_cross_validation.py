@@ -75,7 +75,7 @@ def test_binary_classification(
 
             np.testing.assert_allclose(coef_split, coef_with_intercept)
 
-    df = display.frame()
+    df = display.frame(format="long")
     expected_columns = ["estimator", "split", "feature", "coefficients"]
     assert df.columns.tolist() == expected_columns
     assert df["feature"].tolist() == (["Intercept"] + columns_names) * splitter * len(
@@ -176,7 +176,7 @@ def test_multiclass_classification(
 
             np.testing.assert_allclose(coef_split, coef_with_intercept)
 
-    df = display.frame()
+    df = display.frame(format="long")
     expected_columns = ["estimator", "split", "feature", "label", "coefficients"]
     assert df.columns.tolist() == expected_columns
     assert np.unique(df["label"]).tolist() == np.unique(y).tolist()
@@ -293,7 +293,7 @@ def test_single_output_regression(
 
             np.testing.assert_allclose(coef_split, coef_with_intercept)
 
-    df = display.frame()
+    df = display.frame(format="long")
     expected_columns = ["estimator", "split", "feature", "coefficients"]
     assert df.columns.tolist() == expected_columns
     assert df["feature"].tolist() == (["Intercept"] + columns_names) * splitter * len(
@@ -407,7 +407,7 @@ def test_multi_output_regression(
 
             np.testing.assert_allclose(coef_split, coef_with_intercept)
 
-    df = display.frame()
+    df = display.frame(format="long")
     expected_columns = ["estimator", "split", "feature", "output", "coefficients"]
     assert df.columns.tolist() == expected_columns
     assert np.unique(df["output"]).tolist() == [f"{i}" for i in range(n_outputs)]
@@ -509,7 +509,7 @@ def test_different_features(
     display = report.feature_importance.coefficients()
     assert isinstance(display, CoefficientsDisplay)
 
-    df = display.frame()
+    df = display.frame(format="long")
     expected_features = ["Intercept"] + report_simple.estimator_reports_[
         0
     ].estimator_.feature_names_in_.tolist()
@@ -563,7 +563,7 @@ def test_include_intercept(
 
     display = report.feature_importance.coefficients()
 
-    assert display.frame(include_intercept=False).query("feature == 'Intercept'").empty
+    assert display.frame(format="long", include_intercept=False).query("feature == 'Intercept'").empty
 
     display.plot(include_intercept=False)
     assert all(

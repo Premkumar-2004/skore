@@ -57,7 +57,7 @@ class CoefficientsDisplay(DisplayMixin):
 
     Get coefficients in wide format (default):
 
-    >>> display.frame()  # doctest: +NORMALIZE_WHITESPACE
+    >>> display.frame()
     label                   setosa  versicolor  virginica
     feature
     Intercept                 9.2...       1.7...    -11.0...
@@ -172,10 +172,12 @@ class CoefficientsDisplay(DisplayMixin):
             df.columns = list(group_cols) + ["coefficients"]
             has_split = False
 
-        index = ["feature"] if not has_estimator else ["estimator", "feature"]
-        columns = (
-            [label_col, "split"] if has_split else [label_col] if has_label else None
-        )
+        if has_estimator:
+            index = ["feature"] if not has_label else [label_col, "feature"]
+            columns = ["estimator", "split"] if has_split else ["estimator"]
+        else:
+            index = ["feature"]
+            columns = [label_col, "split"] if has_split else [label_col] if has_label else None
 
         if columns:
             result = df.pivot_table(

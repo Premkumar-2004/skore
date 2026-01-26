@@ -623,3 +623,105 @@ def test_include_intercept(
         label.get_text() != "Intercept" for label in display.ax_.get_yticklabels()
     )
     assert display.figure_.get_suptitle() == "Coefficients"
+
+
+def test_wide_format_binary_classification(
+    pyplot,
+    logistic_binary_classification_with_train_test,
+):
+    """Check wide format for comparison of binary classification EstimatorReports."""
+    estimator, X_train, X_test, y_train, y_test = (
+        logistic_binary_classification_with_train_test
+    )
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report1 = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    report2 = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    comparison = ComparisonReport({"model_1": report1, "model_2": report2})
+    display = comparison.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert df_wide.columns.name == "estimator"
+
+
+def test_wide_format_single_output_regression(
+    pyplot,
+    linear_regression_with_train_test,
+):
+    """Check wide format for comparison of regression EstimatorReports."""
+    estimator, X_train, X_test, y_train, y_test = linear_regression_with_train_test
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report1 = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    report2 = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    comparison = ComparisonReport({"model_1": report1, "model_2": report2})
+    display = comparison.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert df_wide.columns.name == "estimator"
+
+
+def test_query_parameter(
+    pyplot,
+    logistic_binary_classification_with_train_test,
+):
+    """Check that the query parameter filters data correctly for ComparisonReport."""
+    estimator, X_train, X_test, y_train, y_test = (
+        logistic_binary_classification_with_train_test
+    )
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report1 = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    report2 = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    comparison = ComparisonReport({"model_1": report1, "model_2": report2})
+    display = comparison.feature_importance.coefficients()
+
+    df = display.frame(format="long", query={"estimator": "model_1"})
+    assert set(df["estimator"]) == {"model_1"}
+
+    df = display.frame(format="long", query={"feature": "Intercept"})
+    assert set(df["feature"]) == {"Intercept"}

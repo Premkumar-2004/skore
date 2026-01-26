@@ -1,5 +1,6 @@
 import matplotlib as mpl
 import numpy as np
+import pandas as pd
 import pytest
 from sklearn.base import clone
 from sklearn.compose import TransformedTargetRegressor
@@ -563,10 +564,79 @@ def test_include_intercept(
 
     display = report.feature_importance.coefficients()
 
-    assert display.frame(format="long", include_intercept=False).query("feature == 'Intercept'").empty
+    df = display.frame(format="long", include_intercept=False)
+    assert df.query("feature == 'Intercept'").empty
 
     display.plot(include_intercept=False)
     assert all(
         label.get_text() != "Intercept" for label in display.ax_.get_yticklabels()
     )
     assert display.figure_.get_suptitle() == "Coefficients"
+
+
+def test_wide_format_binary_classification(
+    pyplot,
+    logistic_binary_classification_data,
+):
+    """Check wide format for comparison of CrossValidationReports."""
+    estimator, X, y = logistic_binary_classification_data
+    columns_names = [f"Feature #{i}" for i in range(X.shape[1])]
+    X = _convert_container(X, "dataframe", columns_name=columns_names)
+
+    report1 = CrossValidationReport(clone(estimator), X, y, splitter=2)
+    report2 = CrossValidationReport(clone(estimator), X, y, splitter=2)
+    comparison = ComparisonReport({"model_1": report1, "model_2": report2})
+    display = comparison.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert isinstance(df_wide.columns, pd.MultiIndex)
+
+
+def test_aggregate_parameter(
+    pyplot,
+    logistic_binary_classification_data,
+):
+    """Check that the aggregate parameter aggregates CV splits correctly."""
+    estimator, X, y = logistic_binary_classification_data
+    columns_names = [f"Feature #{i}" for i in range(X.shape[1])]
+    X = _convert_container(X, "dataframe", columns_name=columns_names)
+    splitter = 3
+
+    report1 = CrossValidationReport(clone(estimator), X, y, splitter=splitter)
+    report2 = CrossValidationReport(clone(estimator), X, y, splitter=splitter)
+    comparison = ComparisonReport({"model_1": report1, "model_2": report2})
+    display = comparison.feature_importance.coefficients()
+
+    df_long = display.frame(format="long")
+    assert df_long["split"].nunique() == splitter
+
+    df_agg = display.frame(format="wide", aggregate=True)
+
+    for col in df_agg.columns:
+        for val in df_agg[col]:
+            assert "±" in str(val)
+
+
+def test_query_parameter(
+    pyplot,
+    logistic_binary_classification_data,
+):
+    """Check that the query parameter filters data correctly."""
+    estimator, X, y = logistic_binary_classification_data
+    columns_names = [f"Feature #{i}" for i in range(X.shape[1])]
+    X = _convert_container(X, "dataframe", columns_name=columns_names)
+
+    report1 = CrossValidationReport(clone(estimator), X, y, splitter=2)
+    report2 = CrossValidationReport(clone(estimator), X, y, splitter=2)
+    comparison = ComparisonReport({"model_1": report1, "model_2": report2})
+    display = comparison.feature_importance.coefficients()
+
+    df = display.frame(format="long", query={"estimator": "model_1"})
+    assert set(df["estimator"]) == {"model_1"}
+
+    df = display.frame(format="long", query={"split": 0})
+    assert set(df["split"]) == {0}
+
+    df = display.frame(format="long", query={"feature": "Intercept"})
+    assert set(df["feature"]) == {"Intercept"}

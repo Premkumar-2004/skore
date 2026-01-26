@@ -415,3 +415,105 @@ def test_query_parameter(
 
     df_feature = display.frame(format="long", query={"feature": "Intercept"})
     assert set(df_feature["feature"]) == {"Intercept"}
+
+
+def test_wide_format_binary_classification(
+    pyplot,
+    logistic_binary_classification_with_train_test,
+):
+    """Check wide format for binary classification."""
+    estimator, X_train, X_test, y_train, y_test = (
+        logistic_binary_classification_with_train_test
+    )
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    display = report.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert "coefficients" in df_wide.columns
+
+
+def test_wide_format_multiclass_classification(
+    pyplot,
+    logistic_multiclass_classification_with_train_test,
+):
+    """Check wide format for multiclass classification has labels as columns."""
+    estimator, X_train, X_test, y_train, y_test = (
+        logistic_multiclass_classification_with_train_test
+    )
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    display = report.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert df_wide.columns.name == "label"
+
+
+def test_wide_format_single_output_regression(
+    pyplot,
+    linear_regression_with_train_test,
+):
+    """Check wide format for single output regression."""
+    estimator, X_train, X_test, y_train, y_test = linear_regression_with_train_test
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    display = report.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert "coefficients" in df_wide.columns
+
+
+def test_wide_format_multi_output_regression(
+    pyplot,
+    linear_regression_multioutput_with_train_test,
+):
+    """Check wide format for multi-output regression has outputs as columns."""
+    estimator, X_train, X_test, y_train, y_test = (
+        linear_regression_multioutput_with_train_test
+    )
+    columns_names = [f"Feature #{i}" for i in range(X_train.shape[1])]
+    X_train = _convert_container(X_train, "dataframe", columns_name=columns_names)
+    X_test = _convert_container(X_test, "dataframe", columns_name=columns_names)
+
+    report = EstimatorReport(
+        clone(estimator),
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test,
+        y_test=y_test,
+    )
+    display = report.feature_importance.coefficients()
+
+    df_wide = display.frame(format="wide")
+    assert df_wide.index.name == "feature"
+    assert df_wide.columns.name == "output"

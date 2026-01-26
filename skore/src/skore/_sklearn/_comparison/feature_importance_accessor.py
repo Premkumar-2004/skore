@@ -60,7 +60,7 @@ class _FeatureImportanceAccessor(_BaseAccessor["ComparisonReport"], DirNamesMixi
         ...     "report big alpha": report_big_alpha,
         ... })
         >>> display = report.feature_importance.coefficients()
-        >>> display.frame()
+        >>> display.frame(format="long")
                     estimator     feature  coefficients
         0   report small alpha   Intercept    151.5...
         1   report small alpha  Feature #0    -11.6...

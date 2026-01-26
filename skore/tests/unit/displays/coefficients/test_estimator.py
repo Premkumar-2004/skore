@@ -411,10 +411,7 @@ def test_query_parameter(
     labels = np.unique(y_train)
     target_label = int(labels[0])
     df_filtered = display.frame(format="long", query={"label": target_label})
+    assert set(df_filtered["label"]) == {target_label}
 
-    assert df_filtered["label"].nunique() == 1
-    assert df_filtered["label"].iloc[0] == target_label
-
-    # Filter by feature
     df_feature = display.frame(format="long", query={"feature": "Intercept"})
-    assert df_feature["feature"].unique().tolist() == ["Intercept"]
+    assert set(df_feature["feature"]) == {"Intercept"}

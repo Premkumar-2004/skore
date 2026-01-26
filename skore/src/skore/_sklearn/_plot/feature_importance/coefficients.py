@@ -171,7 +171,7 @@ class CoefficientsDisplay(DisplayMixin):
 
         if query is not None:
             conditions = " and ".join(
-                f"`{col}` == {repr(val)}" for col, val in query.items()
+                f"`{col}` == {val!r}" for col, val in query.items()
             )
             df = df.query(conditions)
 
@@ -179,25 +179,34 @@ class CoefficientsDisplay(DisplayMixin):
             return df.reset_index(drop=True)
 
         # Wide format: pivot the dataframe
-        label_col = "label" if "label" in df else "output"
+        label_col: str | None = (
+            "label" if "label" in df else "output" if "output" in df else None
+        )
 
         if aggregate and "split" in df:
-            group_cols = [c for c in df.columns if c not in ("split", "coefficients")]
-            agg = df.groupby(group_cols, sort=False)["coefficients"].agg(["mean", "std"])
+            group_cols = [
+                c for c in df.columns if c not in ("split", "coefficients")
+            ]
+            agg = df.groupby(group_cols, sort=False)["coefficients"].agg(
+                ["mean", "std"]
+            )
             agg["value"] = agg.apply(
                 lambda r: f"{r['mean']:.3f} ± {r['std']:.3f}", axis=1
             )
             df = agg["value"].reset_index()
-            df.columns = list(group_cols) + ["coefficients"]
+            df.columns = pd.Index(list(group_cols) + ["coefficients"])
 
         if "estimator" in df:
-            index = ["feature"] if "label" not in df else [label_col, "feature"]
-            columns = ["estimator", "split"] if "split" in df else ["estimator"]
+            index = ["feature"] if label_col is None else [label_col, "feature"]
+            columns: list[str] | None = (
+                ["estimator", "split"] if "split" in df else ["estimator"]
+            )
         else:
             index = ["feature"]
             columns = (
-                [label_col, "split"] if "split" in df
-                else [label_col] if "label" in df
+                [label_col, "split"] if "split" in df and label_col is not None
+                else [label_col] if label_col is not None
+                else ["split"] if "split" in df
                 else None
             )
 

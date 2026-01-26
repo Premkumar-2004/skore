@@ -459,11 +459,9 @@ def test_query_parameter_cross_validation(
 
     # Filter by a specific split
     df_filtered = display.frame(format="long", query={"split": 0})
-    assert df_filtered["split"].nunique() == 1
-    assert df_filtered["split"].iloc[0] == 0
+    assert set(df_filtered["split"]) == {0}
 
     labels = np.unique(y)
     target_label = int(labels[0])
     df_label = display.frame(format="long", query={"label": target_label})
-    assert df_label["label"].nunique() == 1
-    assert df_label["label"].iloc[0] == target_label
+    assert set(df_label["label"]) == {target_label}

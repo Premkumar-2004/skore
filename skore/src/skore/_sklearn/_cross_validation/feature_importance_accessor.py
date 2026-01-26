@@ -38,7 +38,7 @@ class _FeatureImportanceAccessor(_BaseAccessor[CrossValidationReport], DirNamesM
         >>>     estimator=Ridge(), X=X, y=y, splitter=5, n_jobs=4
         >>> )
         >>> display = report.feature_importance.coefficients()
-        >>> display.frame()
+        >>> display.frame(format="long")
             split     feature  coefficients
         0       0   Intercept      0.0...
         1       0  Feature #0     74.1...

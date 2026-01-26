@@ -180,7 +180,7 @@ class _FeatureImportanceAccessor(_BaseAccessor[EstimatorReport], DirNamesMixin):
         >>> regressor = Ridge()
         >>> report = EstimatorReport(regressor, **split_data)
         >>> display = report.feature_importance.coefficients()
-        >>> display.frame()
+        >>> display.frame(format="long")
                feature  coefficients
         0    Intercept    151.4...
         1   Feature #0     30.6...

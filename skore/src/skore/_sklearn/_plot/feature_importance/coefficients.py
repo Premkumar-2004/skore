@@ -80,8 +80,6 @@ class CoefficientsDisplay(DisplayMixin):
         *,
         include_intercept: bool = True,
         format: Literal["long", "wide"] = "wide",
-        aggregate: bool = False,
-        query: dict[str, Any] | None = None,
     ) -> pd.DataFrame:
         """Get the coefficients in a dataframe format.
 
@@ -93,12 +91,6 @@ class CoefficientsDisplay(DisplayMixin):
         format : {"long", "wide"}, default="wide"
             Output format. "wide" pivots features as rows with labels/splits as
             columns. "long" returns raw data with one row per observation.
-
-        aggregate : bool, default=False
-            When True and format="wide", aggregate CV splits showing "mean ± std".
-
-        query : dict or None, default=None
-            Filter data before formatting. Example: ``{"label": "setosa"}``.
 
         Returns
         -------
@@ -164,64 +156,48 @@ class CoefficientsDisplay(DisplayMixin):
         if self.coefficients["output"].isna().all():
             columns_to_drop.append("output")
 
-        df = self.coefficients.drop(columns=columns_to_drop)
+        frame = self.coefficients.drop(columns=columns_to_drop)
 
         if not include_intercept:
-            df = df.query("feature != 'Intercept'")
-
-        if query is not None:
-            conditions = " and ".join(
-                f"`{col}` == {val!r}" for col, val in query.items()
-            )
-            df = df.query(conditions)
+            frame = frame.query("feature != 'Intercept'")
 
         if format == "long":
-            return df.reset_index(drop=True)
+            return frame.reset_index(drop=True)
 
-        # Wide format: pivot the dataframe
-        label_col: str | None = (
-            "label" if "label" in df else "output" if "output" in df else None
-        )
+        # Wide format
+        if (
+            self.report_type.startswith("comparison")
+            and not self._has_same_features(frame=frame)
+        ):
+            raise ValueError(
+                "Cannot use wide format when estimators have different features. "
+                "Use format='long' instead."
+            )
 
-        if aggregate and "split" in df:
-            group_cols = [
-                c for c in df.columns if c not in ("split", "coefficients")
-            ]
-            agg = df.groupby(group_cols, sort=False)["coefficients"].agg(
-                ["mean", "std"]
-            )
-            agg["value"] = agg.apply(
-                lambda r: f"{r['mean']:.3f} ± {r['std']:.3f}", axis=1
-            )
-            df = agg["value"].reset_index()
-            df.columns = pd.Index(list(group_cols) + ["coefficients"])
-
-        if "estimator" in df:
-            index = ["feature"] if label_col is None else [label_col, "feature"]
-            columns: list[str] | None = (
-                ["estimator", "split"] if "split" in df else ["estimator"]
-            )
-        else:
-            index = ["feature"]
-            columns = (
-                [label_col, "split"] if "split" in df and label_col is not None
-                else [label_col] if label_col is not None
-                else ["split"] if "split" in df
-                else None
-            )
+        # Determine pivot columns based on what's available
+        index = ["feature"]
+        values = ["coefficients"]
+        columns = [col for col in frame.columns if col not in index + values]
 
         if columns:
-            result = df.pivot_table(
+            # Determine the label column name for the resulting columns
+            label_col = columns[0] if len(columns) == 1 else None
+
+            frame = frame.pivot_table(
                 index=index,
                 columns=columns,
-                values="coefficients",
+                values=values,
                 aggfunc="first",
                 sort=False,
             )
+            # Remove the "coefficients" level from MultiIndex columns
+            if isinstance(frame.columns, pd.MultiIndex):
+                frame.columns = frame.columns.droplevel(0)
+            frame.columns.name = label_col
         else:
-            result = df.set_index(index)["coefficients"].to_frame()
+            frame = frame.set_index(index)[values]
 
-        return result
+        return frame
 
     @DisplayMixin.style_plot
     def plot(

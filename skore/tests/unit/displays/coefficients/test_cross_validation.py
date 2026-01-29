@@ -423,51 +423,6 @@ def test_include_intercept(
     assert display.figure_.get_suptitle() == f"Coefficients of {estimator_name}"
 
 
-def test_aggregate_parameter(
-    pyplot,
-    logistic_binary_classification_data,
-):
-    """Check that the aggregate parameter aggregates CV splits correctly."""
-    estimator, X, y = logistic_binary_classification_data
-    columns_names = [f"Feature #{i}" for i in range(X.shape[1])]
-    X = _convert_container(X, "dataframe", columns_name=columns_names)
-    splitter = 3
-
-    report = CrossValidationReport(clone(estimator), X, y, splitter=splitter)
-    display = report.feature_importance.coefficients()
-
-    df_long = display.frame(format="long")
-    assert df_long["split"].nunique() == splitter
-
-    df_agg = display.frame(format="wide", aggregate=True)
-
-    for val in df_agg["coefficients"]:
-        assert "±" in str(val)
-
-
-def test_query_parameter_cross_validation(
-    pyplot,
-    logistic_multiclass_classification_data,
-):
-    """Check that the query parameter filters data correctly for CV reports."""
-    estimator, X, y = logistic_multiclass_classification_data
-    columns_names = [f"Feature #{i}" for i in range(X.shape[1])]
-    X = _convert_container(X, "dataframe", columns_name=columns_names)
-    splitter = 2
-
-    report = CrossValidationReport(clone(estimator), X, y, splitter=splitter)
-    display = report.feature_importance.coefficients()
-
-    # Filter by a specific split
-    df_filtered = display.frame(format="long", query={"split": 0})
-    assert set(df_filtered["split"]) == {0}
-
-    labels = np.unique(y)
-    target_label = int(labels[0])
-    df_label = display.frame(format="long", query={"label": target_label})
-    assert set(df_label["label"]) == {target_label}
-
-
 def test_wide_format_binary_classification(
     pyplot,
     logistic_binary_classification_data,

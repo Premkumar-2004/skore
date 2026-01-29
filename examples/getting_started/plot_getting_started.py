@@ -308,7 +308,7 @@ pd.concat(
 # %%
 final_coefficients = final_report.feature_importance.coefficients()
 final_top_15_features = (
-    final_coefficients.frame()
+    final_coefficients.frame(format="long")
     .sort_values(by="coefficients", key=abs, ascending=False)
     .head(15)["feature"]
     .reset_index(drop=True)

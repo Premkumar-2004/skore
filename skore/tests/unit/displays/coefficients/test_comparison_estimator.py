@@ -689,5 +689,3 @@ def test_wide_format_single_output_regression(
     df_wide = display.frame(format="wide")
     assert df_wide.index.name == "feature"
     assert df_wide.columns.name == "estimator"
-
-

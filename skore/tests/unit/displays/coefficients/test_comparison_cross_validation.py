@@ -591,5 +591,3 @@ def test_wide_format_binary_classification(
     df_wide = display.frame(format="wide")
     assert df_wide.index.name == "feature"
     assert isinstance(df_wide.columns, pd.MultiIndex)
-
-

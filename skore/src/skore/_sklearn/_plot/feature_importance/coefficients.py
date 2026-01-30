@@ -164,7 +164,6 @@ class CoefficientsDisplay(DisplayMixin):
         if format == "long":
             return frame.reset_index(drop=True)
 
-        # Wide format
         if (
             self.report_type.startswith("comparison")
             and not self._has_same_features(frame=frame)
@@ -174,13 +173,11 @@ class CoefficientsDisplay(DisplayMixin):
                 "Use format='long' instead."
             )
 
-        # Determine pivot columns based on what's available
         index = ["feature"]
         values = ["coefficients"]
         columns = [col for col in frame.columns if col not in index + values]
 
         if columns:
-            # Determine the label column name for the resulting columns
             label_col = columns[0] if len(columns) == 1 else None
 
             frame = frame.pivot_table(
@@ -190,7 +187,6 @@ class CoefficientsDisplay(DisplayMixin):
                 aggfunc="first",
                 sort=False,
             )
-            # Remove the "coefficients" level from MultiIndex columns
             if isinstance(frame.columns, pd.MultiIndex):
                 frame.columns = frame.columns.droplevel(0)
             frame.columns.name = label_col
